@@ -1,24 +1,29 @@
-# Nextcloud AI Recognize Bridge 🚀
+# 🌉 Nextcloud AI Recognize Bridge
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Ridam889/nextcloud-ai-recognize-bridge/refs/heads/main/ai_bridge/img/app.svg" width="120" height="120" alt="Logo">
-</p>
+> Автоматический AI-мост для Nextcloud 31 AIO с AVX2 ускорением
 
-Automated high-performance AI deployment and link recovery system for Nextcloud 31 (All-in-One). Offloads video and face classification from the slow Alpine environment directly into a native **Debian 12 worker** with full **AVX2 FMA** CPU acceleration.
+## 📦 Установка
 
-## Features ✨
-* **0% Host Overhead**: Fully automated via Nextcloud Background Jobs (Cron).
-* **CPU Smart Throttling**: Hard-limited to 10 threads to keep your Proxmox host cool.
-* **AIO Upgrade Proof**: Automatically reinstalls proxy hooks and directory structures on container restarts.
-
-## Production Commands ⚡
-
-### One-Click Installation & Deployment
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Ridam889/nextcloud-ai-recognize-bridge/refs/heads/main/core.sh | bash
-```
+🗑️ Удаление
+bash
 
-### Complete Purge & Uninstallation
-```bash
 curl -fsSL https://raw.githubusercontent.com/Ridam889/nextcloud-ai-recognize-bridge/refs/heads/main/core.sh | bash -s uninstall
-```
+📋 Требования
+Компонент	Версия
+Nextcloud AIO	v31+
+Docker	24.0+
+CPU	AVX2 + FMA
+RAM	4GB
+🔧 Устранение проблем
+Проблема	Решение
+❌ AVX2 не найден	grep avx2 /proc/cpuinfo
+🐳 Docker ошибка	systemctl restart docker
+🔒 Нет доступа	sudo usermod -aG docker $USER
+💀 Контейнер не стартует	docker logs nextcloud-ai-bridge
+📄 Лицензия
+
+MIT © Ridam Sobuz
+
+⭐ Поставь звезду на GitHub, если проект полезен!
