@@ -1,7 +1,7 @@
 # Nextcloud AI Recognize Bridge 🚀
 
 <p align="center">
-  <img src="https://github.com/Ridam889/nextcloud-ai-recognize-bridge.git" width="120" height="120" alt="Nextcloud AI Recognize Bridge Logo">
+  <img src="https://raw.githubusercontent.com/Ridam889/nextcloud-ai-recognize-bridge/refs/heads/main/ai_bridge/img/app.svg" width="120" height="120" alt="Logo">
 </p>
 
 Automated high-performance AI deployment and link recovery system for Nextcloud 31 (All-in-One). Offloads video and face classification from the slow Alpine environment directly into a native **Debian 12 worker** with full **AVX2 FMA** CPU acceleration.
