@@ -22,7 +22,7 @@ if [ "$ACTION" == "uninstall" ]; then
     exit 0
 fi
 
-echo "=== [AI Deployer] Starting automated deployment from GitHub ==="
+echo "=== [AI Deployer] Starting automated deployment ==="
 mkdir -p "$AIO_APPS/ai_bridge/appinfo"
 mkdir -p "$AIO_APPS/ai_bridge/lib/BackgroundJob"
 mkdir -p "$AIO_APPS/ai_bridge/img"
@@ -69,23 +69,65 @@ class ClassifyJob extends TimedJob {
 }' > "$AIO_APPS/ai_bridge/lib/BackgroundJob/ClassifyJob.php"
 
 chmod -R 755 "$AIO_APPS/ai_bridge" && chown -R 33:33 "$AIO_APPS/ai_bridge"
+
+# 5. Включаем приложение внутри Nextcloud
 docker exec --user www-data -w /var/www/html nextcloud-aio-nextcloud php occ app:enable ai_bridge --force 2>/dev/null
 
-# 5. СКАЧИВАЕМ ЧИСТЫЙ ПЕРЕХВАТЧИК НАПРЯМУЮ С ВАШЕГО GITHUB (Без риска синтаксических ошибок)
-curl -fsSL https://raw.githubusercontent.com/Ridam889/nextcloud-ai-recognize-bridge/refs/heads/main/occ-bridge.php -o "$AIO_HTML/occ-bridge.php"
+# 6. НАДЁЖНАЯ ЗАПИСЬ ПЕРЕХВАТЧИКА ЧЕРЕЗ КЛАССИЧЕСКИЙ БЛОК ДЛЯ ТРАНСЛЯЦИИ ЛОГОВ ИИ
+cat << 'BRIDGE' > "$AIO_HTML/occ-bridge.php"
+#!/usr/bin/env php
+<?php
+$args = $_SERVER["argv"];
+if (count($args) > 1 && $args[1] === "recognize:classify") {
+    $currentTime = date("H:i:s");
+    echo "=== [AI Bridge] Intercepted: Request sent to Debian Host ===\n";
+    echo "[AI Bridge] Current container time: [$currentTime]. Processing instantly... \n";
+    
+    $trigger = __DIR__ . "/recognize.trigger";
+    $logFile = __DIR__ . "/recognize.log";
+    if (file_exists($logFile)) { @unlink($logFile); }
+    touch($trigger);
+    $lastPos = 0;
+    while (file_exists($trigger)) {
+        sleep(1);
+        if (file_exists($logFile)) {
+            clearstatcache(false, $logFile);
+            $f = fopen($logFile, "rb");
+            if ($f) {
+                fseek($f, $lastPos);
+                while (($line = fgets($f)) !== false) { echo $line; flush(); }
+                $lastPos = ftell($f); fclose($f);
+            }
+        }
+    }
+    if (file_exists($logFile)) {
+        $f = fopen($logFile, "rb");
+        if ($f) { fseek($f, $lastPos); while (($line = fgets($f)) !== false) { echo $line; } fclose($f); @unlink($logFile); }
+    }
+    echo "=== [AI Bridge] Processing successfully finished ===\n";
+    exit(0);
+}
+BRIDGE
 
+# 7. Восстанавливаем резервную копию occ если нужно и делаем инъекцию строки require_once
 if [ -f "$AIO_HTML/occ" ] && [ ! -f "$AIO_HTML/occ.original" ]; then
     cp "$AIO_HTML/occ" "$AIO_HTML/occ.original"
 fi
-echo '<?php require_once "/var/www/html/occ-bridge.php";' > "$AIO_HTML/occ"
 
+# Полностью перезаписываем occ так, чтобы он сначала инклудил наш бридж, а потом выполнял остальную логику
+cat << 'OCC' > "$AIO_HTML/occ"
+<?php
+require_once __DIR__ . '/occ-bridge.php';
+require_once __DIR__ . '/occ.original';
+OCC
+
+# Корректируем права на исполнение
 chmod 755 "$AIO_HTML/occ" "$AIO_HTML/occ-bridge.php"
-chown -R 33:33 "$AIO_HTML/occ" "$AIO_HTML/occ-bridge.php" "$AIO_HTML/occ.original"
+chown -R 33:33 "$AIO_APPS/ai_bridge" "$AIO_HTML/occ" "$AIO_HTML/occ-bridge.php" "$AIO_HTML/occ.original"
 
 # --- НАСТРОЙКА СИСТЕМНОГО ДЕМОНА НА ХОСТЕ ---
 mkdir -p /tmp/nextcloud-ai
-cat << 'DAEMON' > /tmp/nextcloud-ai/ai-daemon.sh
-#!/bin/bash
+echo '#!/bin/bash
 TRIGGER="/var/lib/docker/volumes/nextcloud_aio_nextcloud/_data/recognize.trigger"
 LOG_FILE="/var/lib/docker/volumes/nextcloud_aio_nextcloud/_data/recognize.log"
 while true; do
@@ -94,13 +136,11 @@ while true; do
         rm -f "$TRIGGER"
     fi
     sleep 0.5
-done
-DAEMON
+done' > /tmp/nextcloud-ai/ai-daemon.sh
 chmod +x /tmp/nextcloud-ai/ai-daemon.sh
 
-cat << 'SERVICE' > /etc/systemd/system/nextcloud-ai.service
-[Unit]
-Description=Nextcloud AI Recognize Bridge Mgnovenny Daemon
+echo '[Unit]
+Description=Nextcloud AI Recognize Bridge Real-time Daemon
 After=docker.service
 [Service]
 Type=simple
@@ -108,8 +148,7 @@ User=root
 ExecStart=/tmp/nextcloud-ai/ai-daemon.sh
 Restart=always
 [Install]
-WantedBy=multi-user.target
-SERVICE
+WantedBy=multi-user.target' > /etc/systemd/system/nextcloud-ai.service
 
 systemctl daemon-reload
 systemctl enable nextcloud-ai.service 2>/dev/null
