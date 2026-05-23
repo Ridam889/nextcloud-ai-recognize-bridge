@@ -50,11 +50,14 @@ curl -fsSL https://raw.githubusercontent.com/Ridam889/nextcloud-ai-recognize-bri
 | 🔒 Нет доступа к Docker | sudo usermod -aG docker $USER |
 | 💀 Контейнер не запускается | docker logs nextcloud-ai-recognize-bridge |
 | 📸 Проверить поддержку iGPU | ls -l /dev/drils -l /dev/drils -l /dev/dri |
+|📦 Где контейнер? | docker images \| grep nextcloud-ai-recognize-bridge |
 
 ---
 
 ⭐ Поддержка проекта
+
 Если проект тебе помог — поставь звезду на GitHub! ❤️
+
 Made with ❤️ for Nextcloud Community
 
 📄 Лицензия
