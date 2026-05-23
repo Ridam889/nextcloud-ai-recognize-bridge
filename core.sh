@@ -69,14 +69,11 @@ class ClassifyJob extends TimedJob {
     }
 }' > "$AIO_APPS/ai_bridge/lib/BackgroundJob/ClassifyJob.php"
 
-chmod -R 755 "$AIO_APPS/ai_bridge" && chown -R 33:33 "$AIO_APPS/ai_bridge"
-docker exec --user www-data -w /var/www/html nextcloud-aio-nextcloud php occ app:enable ai_bridge --force 2>/dev/null
-
-# 5. НАКАТЫВАЕМ ОБНОВЛЕННЫЙ ПЕРЕХВАТЧИК С ИНТЕРАКТИВНЫМ ТАЙМЕРОМ ВРЕМЕНИ
+# 4. Записываем файл фонового автозапуска перехватчика occ-bridge.php с часами
 echo '#!/usr/bin/env php
 <?php
 $args = $_SERVER["argv"];
-if (count($args) > 1 && $args === "recognize:classify") {
+if (count($args) > 1 && $args[1] === "recognize:classify") {
     $currentTime = date("H:i:s");
     echo "=== [AI Bridge] Intercepted: Request sent to Debian Host ===\n";
     echo "[AI Bridge] Current container time: [$currentTime]. Waiting for host Cron (up to 60 seconds)... \n";
@@ -107,16 +104,22 @@ if (count($args) > 1 && $args === "recognize:classify") {
     require_once __DIR__ . "/occ.original";
 }' > "$AIO_HTML/occ-bridge.php"
 
+# 5. Делаем бэкап оригинального occ, если его еще нет
 if [ -f "$AIO_HTML/occ" ] && [ ! -f "$AIO_HTML/occ.original" ]; then
     cp "$AIO_HTML/occ" "$AIO_HTML/occ.original"
 fi
+
+# 6. Подменяем occ на вызов нашего моста
 echo '<?php require_once "/var/www/html/occ-bridge.php";' > "$AIO_HTML/occ"
 
-chmod 755 "$AIO_HTML/occ" "$AIO_HTML/occ-bridge.php"
-chown -R 33:33 "$AIO_HTML/occ" "$AIO_HTML/occ-bridge.php" "$AIO_HTML/occ.original"
+# Выставляем права доступа
+chmod 755 "$AIO_HTML/occ" "$AIO_HTML/occ-bridge.php" && chmod -R 755 "$AIO_APPS/ai_bridge"
+chown -R 33:33 "$AIO_APPS/ai_bridge" "$AIO_HTML/occ" "$AIO_HTML/occ-bridge.php" "$AIO_HTML/occ.original"
 
+# 7. АВТО-ДОБАВЛЕНИЕ В КРОН ХОСТА
 (crontab -l 2>/dev/null | grep -Fq "nextcloud-ai-recognize-bridge") || (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab -
 
+# 8. СБОРКА ОБРАЗА ИЗ ВАШЕГО GITHUB
 echo "[AI Deployer] Compiling Docker worker image from GitHub..."
 docker build https://github.com/Ridam889/nextcloud-ai-recognize-bridge.git -t nextcloud-ai-recognize-bridge
 echo "=== [AI Deployer] Automated deployment successfully completed! ==="
