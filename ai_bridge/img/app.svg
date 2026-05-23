@@ -1,1 +1,25 @@
-<svg xmlns="http://w3.org" viewBox="0 0 512 512" width="100%" height="100%"><rect width="512" height="512" rx="128" fill="#0082c9"/><path d="M416 192H320v-32c0-35.3-28.7-64-64-64s-64 28.7-64 64v32H96c-17.7 0-32 14.3-32 32v192c0 17.7 14.3 32 32 32h320c17.7 0 32-14.3 32-32V224c0-17.7-14.3-32-32-32zM224 160c0-17.7 14.3-32 32-32s32 14.3 32 32v32h-64v-32zm160 224H128V256h256v128z" fill="#ffffff"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="128" fill="#0a0e27"/>
+  
+  <!-- Мост -->
+  <path d="M60 360 L256 180 L452 360" fill="none" stroke="#00f2fe" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Отражение моста -->
+  <path d="M60 360 L256 180 L452 360" fill="none" stroke="#4facfe" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+  
+  <!-- Нейросеть на мосту -->
+  <circle cx="256" cy="180" r="25" fill="#00f2fe"/>
+  <circle cx="256" cy="180" r="12" fill="#ffffff"/>
+  
+  <circle cx="140" cy="290" r="14" fill="#4facfe" opacity="0.8"/>
+  <circle cx="372" cy="290" r="14" fill="#4facfe" opacity="0.8"/>
+  
+  <!-- Связи -->
+  <line x1="140" y1="290" x2="256" y2="180" stroke="#00f2fe" stroke-width="3" opacity="0.6"/>
+  <line x1="256" y1="180" x2="372" y2="290" stroke="#00f2fe" stroke-width="3" opacity="0.6"/>
+  
+  <!-- Бинарный код -->
+  <text x="256" y="440" font-family="monospace" font-size="20" fill="#00f2fe" text-anchor="middle" opacity="0.6">
+    01001110 01000011
+  </text>
+</svg>
