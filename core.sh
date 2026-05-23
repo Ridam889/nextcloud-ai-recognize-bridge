@@ -27,7 +27,7 @@ mkdir -p "$AIO_APPS/ai_bridge/appinfo"
 mkdir -p "$AIO_APPS/ai_bridge/lib/BackgroundJob"
 mkdir -p "$AIO_APPS/ai_bridge/img"
 
-# 1. Записываем info.xml со встроенным тегом standalone
+# 1. Записываем info.xml
 echo '<?xml version="1.0" standalone="yes"?>
 <app>
     <id>ai_bridge</id>
@@ -69,41 +69,10 @@ class ClassifyJob extends TimedJob {
 }' > "$AIO_APPS/ai_bridge/lib/BackgroundJob/ClassifyJob.php"
 
 chmod -R 755 "$AIO_APPS/ai_bridge" && chown -R 33:33 "$AIO_APPS/ai_bridge"
+docker exec --user www-data -w /var/www/html nextcloud-aio-nextcloud php occ app:enable ai_bridge --force 2>/dev/null
 
-# 5. НАКАТЫВАЕМ ИСПРАВЛЕННЫЙ ПЕРЕХВАТЧИК С ЧИСТЫМ PHP КОДОМ (Используем одинарные кавычки для безопасности)
-echo '#!/usr/bin/env php
-<?php
-$args = $_SERVER["argv"];
-if (count($args) > 1 && $args === "recognize:classify") {
-    $currentTime = date("H:i:s");
-    echo "=== [AI Bridge] Intercepted: Request sent to Debian Host ===\n";
-    echo "[AI Bridge] Current container time: [$currentTime]. Processing instantly... \n";
-    
-    $trigger = __DIR__ . "/recognize.trigger";
-    $logFile = __DIR__ . "/recognize.log";
-    if (file_exists($logFile)) { @unlink($logFile); }
-    touch($trigger);
-    $lastPos = 0;
-    while (file_exists($trigger)) {
-        sleep(1);
-        if (file_exists($logFile)) {
-            clearstatcache(false, $logFile);
-            $f = fopen($logFile, "rb");
-            if ($f) {
-                fseek($f, $lastPos);
-                while (($line = fgets($f)) !== false) { echo $line; flush(); }
-                $lastPos = ftell($f); fclose($f);
-            }
-        }
-    }
-    if (file_exists($logFile)) {
-        $f = fopen($logFile, "rb");
-        if ($f) { fseek($f, $lastPos); while (($line = fgets($f)) !== false) { echo $line; } fclose($f); @unlink($logFile); }
-    }
-    echo "=== [AI Bridge] Processing successfully finished ===\n";
-} else {
-    require_once __DIR__ . "/occ.original";
-}' > "$AIO_HTML/occ-bridge.php"
+# 5. СКАЧИВАЕМ ЧИСТЫЙ ПЕРЕХВАТЧИК НАПРЯМУЮ С ВАШЕГО GITHUB (Без риска синтаксических ошибок)
+curl -fsSL https://raw.githubusercontent.com/Ridam889/nextcloud-ai-recognize-bridge/refs/heads/main/occ-bridge.php -o "$AIO_HTML/occ-bridge.php"
 
 if [ -f "$AIO_HTML/occ" ] && [ ! -f "$AIO_HTML/occ.original" ]; then
     cp "$AIO_HTML/occ" "$AIO_HTML/occ.original"
@@ -113,7 +82,7 @@ echo '<?php require_once "/var/www/html/occ-bridge.php";' > "$AIO_HTML/occ"
 chmod 755 "$AIO_HTML/occ" "$AIO_HTML/occ-bridge.php"
 chown -R 33:33 "$AIO_HTML/occ" "$AIO_HTML/occ-bridge.php" "$AIO_HTML/occ.original"
 
-# Настройка системного демона на хосте
+# --- НАСТРОЙКА СИСТЕМНОГО ДЕМОНА НА ХОСТЕ ---
 mkdir -p /tmp/nextcloud-ai
 cat << 'DAEMON' > /tmp/nextcloud-ai/ai-daemon.sh
 #!/bin/bash
